@@ -24,6 +24,7 @@ import static com.github.estebanwasinger.DWPlaygroundUtils.updateAppTitle;
 import static javafx.scene.layout.Priority.ALWAYS;
 
 import org.mule.runtime.api.el.BindingContext;
+import org.mule.runtime.api.el.ValidationResult;
 import org.mule.runtime.api.metadata.TypedValue;
 import org.mule.runtime.api.streaming.bytes.CursorStreamProvider;
 import org.mule.runtime.core.internal.el.DefaultBindingContextBuilder;
@@ -93,8 +94,8 @@ public class DWPlayground extends Application {
         AnchorPane inputPane = new AnchorPane();
         inputPane.setPrefWidth(300);
         TextArea inputText = new TextArea();
+        //CodeArea inputText = new CodeArea();
         inputText.setFont(MENLO_FONT);
-//        CodeArea inputText = new CodeArea();
         VBox inputVBox = new VBox();
         VBox.setVgrow(inputText, Priority.ALWAYS);
         inputVBox.getChildren().add(inputText);
@@ -262,6 +263,21 @@ public class DWPlayground extends Application {
             }
         }
     }
+    private boolean isValidScript(String script) {
+        ValidationResult validate = weaveEngine.validate(script);
+        return validate.isSuccess();
+    }
+
+    private String getScriptErrorMessages(String script) {
+        ValidationResult validate = weaveEngine.validate(script);
+        ArrayList<String> messages = new ArrayList<String>();
+        validate.messages().forEach(message -> {
+            String msg = message.getMessage();
+            messages.add(msg);
+        }
+        );
+        return String.join("\n", messages);
+    }
 
     private void evaluateAndUpdateUI(TextArea inputText, TextArea transformationText, TextArea outputTextArea, TitledPane titledPane, String mimeType) {
         TypedValue inputTypedValue = new TypedValue<>(inputText.getText(), getInputDataType(mimeType));
@@ -270,9 +286,14 @@ public class DWPlayground extends Application {
                 .addBinding(PAYLOAD, inputTypedValue)
                 .build();
         try {
-            TypedValue<?> evaluate = weaveEngine.evaluate(transformationText.getText(), bindingContext);
-            outputTextArea.setText(getTypedValueStringValue(evaluate));
-            titledPane.setText("Transformation Output - Type: " + evaluate.getDataType().getMediaType());
+            String script = transformationText.getText();
+            if(isValidScript(script)) {
+                TypedValue<?> evaluate = weaveEngine.evaluate(script, bindingContext);
+                titledPane.setText("Transformation Output - Type: " + evaluate.getDataType().getMediaType());
+                outputTextArea.setText(getTypedValueStringValue(evaluate));
+            } else {
+                outputTextArea.setText(getScriptErrorMessages(script));
+            }
         } catch (Exception e) {
             outputTextArea.setText(e.getMessage());
         }
