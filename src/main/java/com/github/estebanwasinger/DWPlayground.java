@@ -88,7 +88,7 @@ public class DWPlayground extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
 
-        weaveEngine = new WeaveExpressionLanguage();
+        weaveEngine = new WeaveExpressionLanguage(null, null);
 
         SplitPane splitPane = new SplitPane();
         AnchorPane inputPane = new AnchorPane();
